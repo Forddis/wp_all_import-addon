@@ -161,11 +161,22 @@ function addon_import_function($post_id, $data, $import_options){
 					// správa skladu yes/no
 					update_post_meta( $variation_id, '_manage_stock', 'yes' );
 
-				      // pocet kusov na sklade
-				     // update_post_meta( $variation_id, '_stock', $kusy );
+					// If import item update to stock
+					if ($data['_if_stock_import']=='stock') {
+
+						//pocet kusov na sklade
+				     	update_post_meta( $variation_id, '_stock', $data['_stock_qty_import'] );
+
+						// Povoliť nákup aj keď tovar nie je na sklade?
+						update_post_meta( $variation_id, '_backorders', 'no' );
+					}
+					else{
+						// Povoliť nákup aj keď tovar nie je na sklade?
+						update_post_meta( $variation_id, '_backorders', 'notify' );
+					}
+
 				     
-					// Povoliť nákup aj keď tovar nie je na sklade?
-					update_post_meta( $variation_id, '_backorders', 'notify' );
+
 
 				    update_post_meta( $variation_id, '_warehouse_variation_import', $data[_warehouse_import]);
 
@@ -174,7 +185,7 @@ function addon_import_function($post_id, $data, $import_options){
 
 		} 
 		else {
-			// do stuff for everything else
+			// Product Single
 			echo "Produkt single a ostatne<br>";
 
 			/**
