@@ -41,6 +41,15 @@ function addon_fields_function_run_init() {
 	    'radio',
 	    $dodavatel_option
 	);
+	$shopline_size_feed_import->add_field(
+    '_if_stock_import',
+    'Skladom alebo dodavatel?',
+    'radio',
+    array(
+        'warehouse' => 'Dodávateľ',
+        'stock' => 'Skladom'
+    )
+);
 
 
 	$shopline_size_feed_import->set_import_function('addon_import_function');
