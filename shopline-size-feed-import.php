@@ -185,13 +185,14 @@ function addon_import_function($post_id, $data, $import_options){
 
 		} 
 		else {
-			// Product Single
+			/******************************** Product Single********************************************/
 			echo "Produkt single a ostatne<br>";
 
 			/**
 			 *  Zobrat co je v custom fielde _warehouse_general_import a pridat do array - $data[_warehouse_import]
 			 */
-				$warehouse_import = (array) get_post_meta( $product_id, '_warehouse_general_import', true );
+				$previous_import_warehouse = (array) get_post_meta( $product_id, '_warehouse_general_import', true );
+				$warehouse_import = $previous_import_warehouse;
 				$warehouse_import[]= $data[_warehouse_import];
 				update_post_meta( $product_id, '_warehouse_general_import', $warehouse_import);
 				echo "<pre>";
@@ -203,10 +204,37 @@ function addon_import_function($post_id, $data, $import_options){
 				echo "stav skladu - skladom<br>"; 
 				$out_of_stock_staus = 'instock';
 				update_post_meta( $product_id, '_stock_status', wc_clean( $out_of_stock_staus ) );
-			/**
-			 *  Back order nastavit na notify
-			 */
-				update_post_meta( $product_id, '_backorders', 'notify' );
+
+
+				// If import item update to stock
+				if ($data['_if_stock_import']=='stock') {
+
+					//pocet kusov na sklade
+			     	update_post_meta( $product_id, '_stock', $data['_stock_qty_import'] );
+
+			     	// ak nie je dodavatel tak nepovolit backorder
+			     	if (empty($previous_import_warehouse)) {
+						// Povoliť nákup aj keď tovar nie je na sklade?
+			     		update_post_meta( $product_id, '_backorders', 'no' );
+			     	}
+			     	else {
+			     	/**
+					 *  Back order nastavit na notify
+					 */
+					update_post_meta( $product_id, '_backorders', 'notify' );
+			     	}
+
+					
+				}
+				else{
+
+					/**
+					 *  Back order nastavit na notify
+					 */
+					update_post_meta( $product_id, '_backorders', 'notify' );
+				}
+
+
 		}
 	}//end if data empty
 
