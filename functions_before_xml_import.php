@@ -99,7 +99,7 @@ function check_and_change_Single_product_with_customfield($warehouse_name){
 					*  ak uz nie je dodavatel a je niečo skladom tak prepnut back odrder na 'no' 
 					*/
 				//echo "Produktu nepovolit spetnu objednavku<br>";
-				//echo update_post_meta( $product_id, '_backorders', 'no' );
+				update_post_meta( $product_id, '_backorders', 'no' );
 
 				}
 
