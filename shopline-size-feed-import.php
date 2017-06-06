@@ -110,7 +110,9 @@ function addon_import_function($post_id, $data, $import_options){
 					/*********************************************************************************
 					 *   Create atribute
 					 */
-					echo $size_name[] = $data['_size_import'];
+					
+					
+					echo $size_name[] = str_replace(',', '.', wc_clean($data['_size_import']));// zmeni ciarku na bodku
 				   // In a class constructor
 				     $attribute = new stdClass();
 				      if (taxonomy_exists(wc_attribute_taxonomy_name('velkost'))) :
@@ -124,7 +126,7 @@ function addon_import_function($post_id, $data, $import_options){
 				          $attribute->size_tax => array(
 				              'name' => $attribute->size_tax,
 				              'value' =>'',
-				              'is_visible' => '1',
+				              'is_visible' => '0',
 				              'is_variation' => '1',
 				              'is_taxonomy' => '1'
 				              //'position' => 1000
@@ -148,10 +150,20 @@ function addon_import_function($post_id, $data, $import_options){
 					      'post_type'    => 'product_variation'
 					  );
 
-					  $variation_id = wp_insert_post( $variation );
+					  $variation_id = wp_insert_post( $variation );//vytvoy post(variant) so zadefinovanymi atributmi
 					  echo  $variation_id."<br>";
-					  echo $size_name=strtolower($size_name[0]);//ak je ponechane velke pismo tak sa velkost nezobrazuje v admine
-					  update_post_meta( $variation_id, 'attribute_' . $attribute->size_tax, $size_name );
+					/************** get atribute slug by name ***************/					 
+					  $taxonomy = $attribute->size_tax;
+						$meta = get_post_meta($variation_id, 'attribute_'.$taxonomy, true);
+						$term = get_term_by('name', $size_name[0], $taxonomy);
+						
+						echo "term -slug ".$term->slug;
+						echo "<hr>";
+					/**************************************/
+
+					 $size_name= $term->name;
+					 $size_slug= $term->slug;//pre vytvorenie atributu do variant je nutne pouzit slug atributu       
+					  update_post_meta( $variation_id, 'attribute_' . $taxonomy, $size_slug );
 
 					  // sku pre variant zlozene z vyrobne cislo --velkost-dodavatel
 					  $parent_sku = get_post_meta( $parent_id, '_sku', true );
