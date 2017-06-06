@@ -44,12 +44,12 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 		if ( $the_query->have_posts() ) {
 			//echo 'Skuska single product funkcia<ul>';
 			while ( $the_query->have_posts() ) {
-				echo "<hr>";
+				//echo "<hr>";
 				$the_query->the_post();
 				$product_id = get_the_id();
 				$warehouse_import = (array) get_post_meta( get_the_id(), '_warehouse_general_import', true );
-				echo '<li>'.get_the_title().'-'.get_the_id().'</li>';
-				print_r($warehouse_import);
+				//echo '<li>'.get_the_title().'-'.get_the_id().'</li>';
+				//print_r($warehouse_import);
 
 
 		/**
