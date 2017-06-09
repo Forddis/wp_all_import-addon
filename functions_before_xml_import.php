@@ -72,7 +72,7 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 			unset($warehouse_import[$key]);
 			
 			//echo "po zmazani ".$warehouse_name."<br>";
-			print_r($warehouse_import);
+			//print_r($warehouse_import);
 			update_post_meta( $product_id, '_warehouse_general_import', $warehouse_import );
 
 
@@ -171,13 +171,13 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 	
 		$product_parent_ids = array();
 		if ( $the_query->have_posts() ) {
-			echo '<ul><h3>Delete variation</h3>';
+			//echo '<ul><h3>Delete variation</h3>';
 			while ( $the_query->have_posts() ) {
 				$the_query->the_post();
 				$variation_delete_id = get_the_id();
-				echo '<li><hr>' . get_the_title() . '</li>';
-				echo '<li>Variation delete ID -' . $variation_delete_id . '<hr></li>';				
-				echo '<li>_Stock -' . get_post_meta( get_the_id(), '_stock', true ). '<hr></li>';				
+				//echo '<li><hr>' . get_the_title() . '</li>';
+				//echo '<li>Variation delete ID -' . $variation_delete_id . '<hr></li>';				
+				//echo '<li>_Stock -' . get_post_meta( get_the_id(), '_stock', true ). '<hr></li>';				
 				//echo '<li>' . wp_get_post_parent_id( $post_ID ) . '</li>';
 
 				wp_delete_post( $variation_delete_id, true ); 
@@ -185,7 +185,7 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 
 				$product_parent_ids[] = wp_get_post_parent_id( $post_ID );
 			}
-			echo '</ul>';
+			//echo '</ul>';
 			/* Restore original Post Data */
 			wp_reset_postdata();
 		} else {
@@ -234,7 +234,7 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 			wp_set_object_terms( $product_id, $previously_attributes  , $attribute->size_tax );
 			foreach ($product_variations as $variation) {
 								
-								$previously_attributes[] = $variation['attributes'][attribute_pa_velkost];
+								$previously_attributes[] = $variation['attributes']['attribute_pa_velkost'];
 			}
 			
 
@@ -246,29 +246,29 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 function before_xml_import($import_id) {
     $import = new PMXI_Import_Record();
     $import->getById($import_id);
-    echo "<pre>";
-    print_r($import['options']['shopline_size_feed_import']);
+    //echo "<pre>";
+    //print_r($import['options']['shopline_size_feed_import']);
     //print_r($import);
-    echo "</pre>";
+    //echo "</pre>";
     if (!$import->isEmpty()) {
 
      }
 
      echo "<hr>dodavatel -";
-     echo $warehouse_name = $import['options']['shopline_size_feed_import'][_warehouse_import];
+     echo $warehouse_name = $import['options']['shopline_size_feed_import']['_warehouse_import'];
      echo "<br>";
-     echo $import_to_stock = $import['options']['shopline_size_feed_import'][_if_stock_import]; // stock/warehouse
+     echo $import_to_stock = $import['options']['shopline_size_feed_import']['_if_stock_import']; // stock/warehouse
      echo "<hr>";
-     $sku_field = $import['options']['shopline_size_feed_import'][_sku_import];
+     $sku_field = $import['options']['shopline_size_feed_import']['_sku_import'];
 
      // vytiahne z wp all importu zo spusteneho imporu info o dodavatalovi
      if ($sku_field != "") {
-     	$warehouse_name = $import['options']['shopline_size_feed_import'][_warehouse_import];
+     	$warehouse_name = $import['options']['shopline_size_feed_import']['_warehouse_import'];
      	//$dodavatel_name = $import['options']['shopline_size_feed_import'][_dodavatel];
 
-			echo "<h2>Funkcia before_xml_import spustena - </h2>";
-			print_r($warehouse_name);
-			echo "";
+			//echo "<h2>Funkcia before_xml_import spustena - </h2>";
+			//print_r($warehouse_name);
+			//echo "";
 		delete_product_variation_by_customfield($warehouse_name,$import_to_stock);
 		check_and_change_Single_product_with_customfield($warehouse_name,$import_to_stock);
      }
