@@ -203,29 +203,45 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 		
 		foreach ($_unique_product_parent_ids as $_unique_product_parent_id) {
 					
-			$product_id = $_unique_product_parent_id	;	
-			$post = get_post($product_id);
+			$product_id = $_unique_product_parent_id;
+/*			echo $product_id;	
+			 $post = get_post($product_id);
+			
+			//echo "<hr>".$post;
 
 			$id =  $post->ID;
+			echo "<hr>".$id ;*/
 
-			$product_variations = new WC_Product_Variable( $id );
+			$product_variations = new WC_Product_Variable( $product_id );
 			$product_variations = $product_variations->get_available_variations();
 		
+		// ak nema produkt varianty tak catalaog visibility nastavit na hidden
 			if (empty($product_variations) ){
 				//echo "Produkt hidden s ID - ". $product_id;
 
 				// produkty draft nehadzat do kosa ponechat draft
 				$post_status = get_post_status( $product_id );	
 				($post_status == 'draft')?$status = "draft":$status = "trash";// publish / pending / draft / trash
+
+					$_product = wc_get_product( $product_id ); //object product
+				 	
+				 	$visibility =  wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
+				 	$stock_status = wc_clean( 'outofstock' );// 'outofstock', 'instock'
+				 	$date = new DateTime();
+
+				 	$_product->set_catalog_visibility($visibility );
+				 	$_product->set_date_modified($date);
+
+					$_product->set_stock_quantity( '' );
+					$_product->set_backorders( 'no' );
+					$_product->set_stock_status('outofstock');//bez quantity '' a backorders no sa neprepne
+
+   					$_product->save();
 					
-				$args = array( 
-					'ID'				=> $product_id,
-					'post_status'		=> $status,
-					'post_modified '	=> current_time( 'mysql' ),
-					'post_modified_gmt'	=> current_time( 'mysql', 1 )
-					);
-				wp_update_post($args);
-		
+  					/*echo "<pre>";
+  					print_r($_product);
+  					echo "<pre>";*/
+			
 			}
 
 			$previously_attributes = array();
