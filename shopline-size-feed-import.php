@@ -76,6 +76,22 @@ function addon_import_function($post_id, $data, $import_options){
 		$product_id = $post_id;
 		$_product = wc_get_product($product_id); //vypise informacie o produkte
 
+		/**
+		 * set product (parent)
+		 * catalog_visibilit 	: visible
+		 * stock_status 		: instock
+		 * set_backorders		: notify
+		 */
+		
+		$visibility 	= wc_clean( 'visible' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
+	 	$stock_status 	= wc_clean( 'instock' );// 'outofstock', 'instock'
+	 	
+	 	$_product->set_catalog_visibility($visibility );	 			
+		$_product->set_backorders( 'notify' );
+		$_product->set_stock_status($stock_status);
+
+		$_product->save();
+
 
 		/**
 		 * ked je produkt variabinly vytvara varianty pri jednoduchom meni len jeho skladove stavy a typ zobrazenie (kos, koncept ...)
@@ -104,6 +120,8 @@ function addon_import_function($post_id, $data, $import_options){
 				$regular_price 	= $_product->get_regular_price();
 				$sale_price 	= $_product->get_sale_price();
 				$price 			= $_product->get_price();
+
+
 
 
 
@@ -248,7 +266,7 @@ function addon_import_function($post_id, $data, $import_options){
 
 
 		}
-	}//end if data empty
+	}//end if !empty($data['_sku_import'])
 
 }
 
