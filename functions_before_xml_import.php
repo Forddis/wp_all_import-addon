@@ -92,14 +92,24 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 					 *  ak uz nie je dodavatel a nie je nič skladom tak product do koša
 					 *  a prepnut back odrder na 'no'
 					 */
-					//echo "Produktu nepovolit spetnu objednavku<br>";
-						update_post_meta( $product_id, '_backorders', 'no' );
-					//echo "Produkt hodeny do koša <br>";
-					 wp_trash_post( $product_id );
+					$_product = wc_get_product( $product_id ); //object product
+				 	
+				 	$visibility 	= wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
+				 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
+				 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
+				 	$date 			= new DateTime();
 
-					//echo "Produkt stav skladu - nie je na sklade<br>"; 
-					 $out_of_stock_staus = 'outofstock';
-					 update_post_meta( $product_id, '_stock_status', wc_clean( $out_of_stock_staus ) );
+				 	$_product->set_catalog_visibility($visibility );
+				 	$_product->set_date_modified($date);
+
+					$_product->set_stock_quantity( '' );
+					$_product->set_backorders( $backorders );
+					$_product->set_stock_status($stock_status);//bez quantity '' a backorders no sa neprepne
+
+   					$_product->save();
+
+					 //echo "Produkt hodeny do koša <br>";
+					 //wp_trash_post( $product_id );
 
 
 				}
@@ -225,16 +235,17 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 
 					$_product = wc_get_product( $product_id ); //object product
 				 	
-				 	$visibility =  wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
-				 	$stock_status = wc_clean( 'outofstock' );// 'outofstock', 'instock'
-				 	$date = new DateTime();
+				 	$visibility 	= wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
+				 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
+				 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
+				 	$date 			= new DateTime();
 
 				 	$_product->set_catalog_visibility($visibility );
 				 	$_product->set_date_modified($date);
 
 					$_product->set_stock_quantity( '' );
-					$_product->set_backorders( 'no' );
-					$_product->set_stock_status('outofstock');//bez quantity '' a backorders no sa neprepne
+					$_product->set_backorders( $backorders );
+					$_product->set_stock_status($stock_status);//bez quantity '' a backorders no sa neprepne
 
    					$_product->save();
 					
