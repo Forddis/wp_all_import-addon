@@ -67,12 +67,12 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 		
 		//echo "vymazat nazov dodavatela z produktu <br>"; 
 
-			// najde v array podla value key a potom $key z array odstrani 
-			$key = array_search($warehouse_name, $warehouse_import);
-			unset($warehouse_import[$key]);
+			// najde v array podla value($warehouse_name) všetky keys  
+			$removeKeys = array_keys( $warehouse_import ,$warehouse_name);
 			
-			//echo "po zmazani ".$warehouse_name."<br>";
-			//print_r($warehouse_import);
+			//a potom podla $keys z array odstrani vsetky values
+			$warehouse_import = array_diff_key($warehouse_import, array_flip($removeKeys));
+
 			update_post_meta( $product_id, '_warehouse_general_import', $warehouse_import );
 
 
