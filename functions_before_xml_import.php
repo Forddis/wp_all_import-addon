@@ -69,8 +69,11 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 
 			// najde v array podla value($warehouse_name) všetky keys  
 			$removeKeys = array_keys( $warehouse_import ,$warehouse_name);
+
+			$removeKeysEmpty = array_keys( $warehouse_import ,'');
 			
 			//a potom podla $keys z array odstrani vsetky values
+			$warehouse_import = array_diff_key($warehouse_import, array_flip($removeKeysEmpty));
 			$warehouse_import = array_diff_key($warehouse_import, array_flip($removeKeys));
 
 			update_post_meta( $product_id, '_warehouse_general_import', $warehouse_import );
@@ -84,7 +87,7 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 				//echo "Produkt nema ziadneho dodavatela<br>";
 				// kolko ks produktu je skladom
 				$skladom_ks  = get_post_meta( $product_id, '_stock', true );
-				//echo "a skladom ma veci - $skladom_ks<br>";
+				echo $product_id."-skladom ma veci - $skladom_ks<br>";
 
 
 				if($skladom_ks == 0){
