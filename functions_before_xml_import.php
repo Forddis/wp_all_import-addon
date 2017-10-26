@@ -1,4 +1,67 @@
 <?php
+// WP wp_update_post funkcia nastavi staus variantu na private/publish
+function change_post_status($post_id,$status){
+    $current_post = get_post( $post_id, 'ARRAY_A' );
+    $current_post['post_status'] = $status;
+    wp_update_post($current_post);
+}   
+//tato funkcia je o 2/3 rychlesja ako s objekotm ale nedokaze v rodicovi vymazat variant child_vysible z objektu produktu 
+function set_variations_how_private($variation_id){
+
+		$status 		= wc_clean( 'private' );// Options: 'private', 'publish'
+		$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
+		$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
+
+		change_post_status($variation_id, $status); 
+		update_post_meta( $variation_id, '_stock', '' );
+		update_post_meta( $variation_id, '_stock_status',$stock_status );
+		update_post_meta( $variation_id, '_backorders',$backorders);
+		do_action( 'pmxi_product_variation_saved', $variation_id );
+}
+//  toto je nepouzita funkcia lebo je dost pomala set_variations_how_private($variation_id) je o 2/3 rychlejsia
+function set_variation_how_private_object($variation_id){
+
+				$product_object = wc_get_product($variation_id); //vypise informacie o produkte
+
+				$status 		= wc_clean( 'private' );// Options: 'private', 'publish'
+			 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
+			 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
+				 	
+				$product_object->set_stock_quantity('');
+				$product_object->set_backorders( $backorders );
+				$product_object->set_stock_status($stock_status);
+				$product_object->set_status( $status );
+				$product_object->save();
+
+ //do_action( 'woocommerce_api_save_product_variation', $product_object );
+
+}
+
+function set_product_hidden($product_id){
+				// produkty draft nehadzat do kosa ponechat draft
+				$post_status = get_post_status( $product_id );	
+				($post_status == 'draft')?$status = "draft":$status = "trash";// publish / pending / draft / trash
+
+					$_product = wc_get_product( $product_id ); //object product
+				 	
+				 	$visibility 	= wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
+				 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
+				 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
+				 	$date 			= new DateTime();
+
+				 	$_product->set_catalog_visibility($visibility );
+				 	$_product->set_date_modified($date->getTimestamp());
+					$_product->set_stock_quantity( '' );
+					$_product->set_backorders( $backorders );
+					$_product->set_stock_status($stock_status);//bez quantity '' a backorders no sa neprepne
+
+   					$_product->save();
+}
+
+
+
+
+
 
 /**
  *  Funkcia
@@ -92,26 +155,13 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 
 				if($skladom_ks == 0){
 					/**
-					 *  ak uz nie je dodavatel a nie je nič skladom tak product do koša
-					 *  a prepnut back odrder na 'no'
+					 *  ak uz nie je dodavatel a nie je nič skladom tak product hidden
+					 *  
 					 */
-					$_product = wc_get_product( $product_id ); //object product
-				 	
-				 	$visibility 	= wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
-				 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
-				 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
-				 	$date 			= new DateTime();
+					
+						set_product_hidden($product_id);
 
-				 	$_product->set_catalog_visibility($visibility );
-				 	$_product->set_date_modified($date);
-
-					$_product->set_stock_quantity( '' );
-					$_product->set_backorders( $backorders );
-					$_product->set_stock_status($stock_status);//bez quantity '' a backorders no sa neprepne
-
-   					$_product->save();
-
-					 //echo "Produkt hodeny do koša <br>";
+					 
 					 //wp_trash_post( $product_id );
 
 
@@ -143,133 +193,90 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 function delete_product_variation_by_customfield($warehouse_name,$import_to_stock){
 	/*********************************************************************************
 	 * Ked je import do skladu zmaze vsetky varianty kotore nemaju polozku 0
-	 *  Zmaže všetky varianty ktore maju custom field so zadefinou hodnotou velkoskladu
+	 *  Nastavi hodnotu status na private pre všetky varianty ktore maju custom field so zadefinou hodnotou velkoskladu
 	 */
-	if ($import_to_stock == 'stock') {
-				 	$args = array(
-	  'numberposts' => -1,
-	  'nopaging'	=> true,
-	  'post_type'   => 'product_variation',
-	  	  'meta_query' => array (
+	$time_start = microtime(true); 
+	$args = array(
+		'numberposts' => -1,
+		'nopaging'      => true,
+		'post_status'  => 'publish',
+		'post_type'   => 'product_variation',
+		'meta_key'    => '_warehouse_variation_import',
+		'meta_value'  => $warehouse_name,
 
-            
-			 'relation' => 'AND',
-            array(
-                 'key' => '_stock',
-                 'type' => 'NUMERIC', // ked nie je numeric neberie hodnotu ako cislo
-                  'value' => '1',
-                  'compare' => '>=' // vacsie alebo rovne
-              ),
-            
-
-          )
-
+		'no_found_rows' => true, 
+		'update_post_meta_cache' => false, 
+		'update_post_term_cache' => false, 
+		'return' => 'ids'
 	);
-	}
-	else{
-	 	$args = array(
-	  'numberposts' => -1,
-	  'nopaging'      => true,
-	  'post_type'   => 'product_variation',
-	  'meta_key'    => '_warehouse_variation_import',
-	  'meta_value'  => $warehouse_name
-	);
-	}
-
-
 	
 
-	// query
-	$the_query = new WP_Query( $args ); 
+		// query
+		$the_query = new WP_Query( $args ); 
 	
 		$product_parent_ids = array();
 		if ( $the_query->have_posts() ) {
 			//echo '<ul><h3>Delete variation</h3>';
 			while ( $the_query->have_posts() ) {
 				$the_query->the_post();
-				$variation_delete_id = get_the_id();
-				//echo '<li><hr>' . get_the_title() . '</li>';
-				//echo '<li>Variation delete ID -' . $variation_delete_id . '<hr></li>';				
-				//echo '<li>_Stock -' . get_post_meta( get_the_id(), '_stock', true ). '<hr></li>';				
-				//echo '<li>' . wp_get_post_parent_id( $post_ID ) . '</li>';
+				$variation_id = get_the_id(); 
 
-				wp_delete_post( $variation_delete_id, true ); 
+				set_variations_how_private($variation_id);
 
+				// pole vsetkych id produktov ktych varianty boli upravene 
+				$product_parent_ids[] = wp_get_post_parent_id( $variation_id );
 
-				$product_parent_ids[] = wp_get_post_parent_id( $post_ID );
 			}
 			//echo '</ul>';
 			/* Restore original Post Data */
 			wp_reset_postdata();
+			wp_reset_query();  // Restore global post data stomped by the_post(). 
 		} else {
 			// no posts found
 		}
 
-		$_unique_product_parent_ids = array_unique($product_parent_ids); // spoji vsetky duplicitne id do jedneho
-
-
-		wp_reset_query();  // Restore global post data stomped by the_post(). 
-
-		/***********************************************************************************************
-		 *  Reupdate article from variant 
-		 */
 		
+
+		$_unique_product_parent_ids = array_unique($product_parent_ids); // spoji vsetky duplicitne id produktov do jedneho
+
+		// loop ocekuje ktore produkty uz nemaju publish(visible) variant a nastavia mu hodnotu v katalogu hidden
+	$count_hidden_product = 0;	         
 		foreach ($_unique_product_parent_ids as $_unique_product_parent_id) {
-					
-			$product_id = $_unique_product_parent_id;
-/*			echo $product_id;	
-			 $post = get_post($product_id);
-			
-			//echo "<hr>".$post;
+							
+					$product_id = $_unique_product_parent_id;
 
-			$id =  $post->ID;
-			echo "<hr>".$id ;*/
+					$product_variations = new WC_Product_Variable( $product_id );
 
-			$product_variations = new WC_Product_Variable( $product_id );
-			$product_variations = $product_variations->get_available_variations();
-		
-		// ak nema produkt varianty tak catalaog visibility nastavit na hidden
-			if (empty($product_variations) ){
-				//echo "Produkt hidden s ID - ". $product_id;
+					// dostupne varianty - pri metode nastavenia statusu variany len update post a nie $variant->save() sa pri pordukte variant stale zobrazuje, ale nema hodnotu  [variation_is_visible]=>1   
+					$product_variations = $product_variations->get_available_variations();
 
-				// produkty draft nehadzat do kosa ponechat draft
-				$post_status = get_post_status( $product_id );	
-				($post_status == 'draft')?$status = "draft":$status = "trash";// publish / pending / draft / trash
+					// vrati 1 ak najde v poli $product_variations aspon jednu value-1 pri key-variation_is_visible
+					$found_key = strlen(array_search(1, array_column($product_variations, 'variation_is_visible')));
 
-					$_product = wc_get_product( $product_id ); //object product
-				 	
-				 	$visibility 	= wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
-				 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
-				 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
-				 	$date 			= new DateTime();
+					if (empty($found_key) ){
 
-				 	$_product->set_catalog_visibility($visibility );
-				 	$_product->set_date_modified($date);
+						set_product_hidden($product_id);
+						$count_hidden_product++;
+					}
+		// zobrauje postupne udaje z loopu ak je nieco na zobrazenie		
+/*		flush();
+		ob_flush();*/
 
-					$_product->set_stock_quantity( '' );
-					$_product->set_backorders( $backorders );
-					$_product->set_stock_status($stock_status);//bez quantity '' a backorders no sa neprepne
 
-   					$_product->save();
-					
-  					/*echo "<pre>";
-  					print_r($_product);
-  					echo "<pre>";*/
-			
-			}
 
-			$previously_attributes = array();
-			//naimportuje prazdne pole pred importom atributov
-			$attribute->size_tax = wc_attribute_taxonomy_name('velkost');
-			wp_set_object_terms( $product_id, $previously_attributes  , $attribute->size_tax );
-			foreach ($product_variations as $variation) {
-								
-								$previously_attributes[] = $variation['attributes']['attribute_pa_velkost'];
-			}
-			
-
-			wp_set_object_terms( $product_id, $previously_attributes  , $attribute->size_tax );
 		}
+		echo "Upravenych produktov - ".count($_unique_product_parent_ids);
+		echo "<br>";
+		echo "Vypnutych produktov  - ".$count_hidden_product;
+		echo "<br>";
+	$time_end = microtime(true);
+
+	//dividing with 60 will give the execution time in minutes other wise seconds
+	$execution_time = ($time_end - $time_start)/60;
+
+	//execution time of the script
+	echo '<b>Total Execution Time - delete_product_variation_by_customfield :</b> '.$execution_time.' Mins';
+
 
 }
 
@@ -296,11 +303,10 @@ function before_xml_import($import_id) {
      	$warehouse_name = $import['options']['shopline_size_feed_import']['_warehouse_import'];
      	//$dodavatel_name = $import['options']['shopline_size_feed_import'][_dodavatel];
 
-			//echo "<h2>Funkcia before_xml_import spustena - </h2>";
-			//print_r($warehouse_name);
-			//echo "";
+			echo "<h2>Funkcia before_xml_import spustena - </h2>";
+			echo "<br>";
 		delete_product_variation_by_customfield($warehouse_name,$import_to_stock);
-		check_and_change_Single_product_with_customfield($warehouse_name,$import_to_stock);
+		//check_and_change_Single_product_with_customfield($warehouse_name,$import_to_stock);
      }
 }
 
