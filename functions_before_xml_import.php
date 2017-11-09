@@ -18,6 +18,34 @@ function set_variations_how_private($variation_id){
 		update_post_meta( $variation_id, '_backorders',$backorders);
 		do_action( 'pmxi_product_variation_saved', $variation_id );
 }
+
+//------------------
+function set_variations_how_publish($variation_id){
+
+		$status 		= wc_clean( 'publish' );// Options: 'private', 'publish'
+		$stock_status 	= wc_clean( 'instock' );// 'outofstock', 'instock'
+		$backorders 	= wc_clean( 'notify' );// 'no', 'yes', 'notify'
+
+		change_post_status($variation_id, $status); 
+		update_post_meta( $variation_id, '_stock', '' );
+		update_post_meta( $variation_id, '_stock_status',$stock_status );
+		update_post_meta( $variation_id, '_backorders',$backorders);
+		do_action( 'pmxi_product_variation_saved', $variation_id );
+}
+//------------------
+function set_stock_variations_how_publish($variation_id,$stock_qty){
+
+		$status 		= wc_clean( 'publish' );// Options: 'private', 'publish'
+		$stock_status 	= wc_clean( 'instock' );// 'outofstock', 'instock'
+		$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
+
+		change_post_status($variation_id, $status); 
+		update_post_meta( $variation_id, '_stock', $stock_qty );
+		update_post_meta( $variation_id, '_stock_status',$stock_status );
+		update_post_meta( $variation_id, '_backorders',$backorders);
+		do_action( 'pmxi_product_variation_saved', $variation_id );
+}
+
 //  toto je nepouzita funkcia lebo je dost pomala set_variations_how_private($variation_id) je o 2/3 rychlejsia
 function set_variation_how_private_object($variation_id){
 
@@ -42,15 +70,18 @@ function set_product_hidden($product_id){
 				$post_status = get_post_status( $product_id );	
 				($post_status == 'draft')?$status = "draft":$status = "trash";// publish / pending / draft / trash
 
-					$_product = wc_get_product( $product_id ); //object product
-				 	
+					$_product = wc_get_product($product_id); //object product
+				// 	$_product = new WC_Product_Variable($product_id);
 				 	$visibility 	= wc_clean( 'hidden' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
 				 	$stock_status 	= wc_clean( 'outofstock' );// 'outofstock', 'instock'
 				 	$backorders 	= wc_clean( 'no' );// 'no', 'yes', 'notify'
-				 	$date 			= new DateTime();
+				 	//$date 			= new DateTime();
+				 	$date 			= date_create();
 
-				 	$_product->set_catalog_visibility($visibility );
-				 	$_product->set_date_modified($date->getTimestamp());
+
+					$_product->set_catalog_visibility($visibility);
+				 	//$_product->set_date_modified($date->getTimestamp());
+				 	$_product->set_date_modified(date_timestamp_get($date));
 					$_product->set_stock_quantity( '' );
 					$_product->set_backorders( $backorders );
 					$_product->set_stock_status($stock_status);//bez quantity '' a backorders no sa neprepne
@@ -58,6 +89,59 @@ function set_product_hidden($product_id){
    					$_product->save();
 }
 
+	/**
+	 * set product (parent)
+	 * catalog_visibilit 	: visible
+	 * stock_status 		: instock
+	 * set_backorders		: notify
+	 */
+function set_product_visible($product_id){
+	$_product = wc_get_product($product_id); //vypise informacie o produkte
+
+	$visibility 	= wc_clean( 'visible' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
+ 	$stock_status 	= wc_clean( 'instock' );// 'outofstock', 'instock'
+ 	
+ 	$_product->set_catalog_visibility($visibility );	 			
+	$_product->set_backorders( 'notify' );
+	$_product->set_stock_status($stock_status);
+
+	$_product->save();
+}
+// ocekuje ci ma produkt visible variant
+function set_parent_hidden_if_hasnt_variation($product_id){
+
+	$product_variations = new WC_Product_Variable( $product_id );
+
+	// dostupne varianty - pri metode nastavenia statusu variany len update post a nie $variant->save() sa pri pordukte variant stale zobrazuje, ale nema hodnotu  [variation_is_visible]=>1   
+	$product_variations = $product_variations->get_available_variations();
+
+	// vrati 1 ak najde v poli $product_variations aspon jednu value-1 pri key-variation_is_visible
+	$found_key = strlen(array_search(1, array_column($product_variations, 'variation_is_visible')));
+
+	if (empty($found_key) ){
+
+		set_product_hidden($product_id);
+		echo "Product Hidden ID--".$product_id;
+		//$count_hidden_product++;
+	}
+
+}
+
+/**
+ *  Funkcia updatne cenu u variant  podla ceny u rodica
+ */
+function update_product_variation_price($variation_id){
+	$product_id = wp_get_post_parent_id( $variation_id );
+
+	echo $regular_price = get_post_meta( $product_id, '_regular_price', true);
+	echo "<br>";
+	echo $sale_price = get_post_meta( $product_id, '_sale_price', true);
+	echo "<br>";
+
+	update_post_meta( $variation_id, '_regular_price', $regular_price);
+	update_post_meta( $variation_id, '_sale_price', $sale_price);
+	do_action( 'pmxi_product_variation_saved', $variation_id );
+}
 
 
 
@@ -79,7 +163,7 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 
 // args vyber simple (jednoduchy) product ktoreho custom filed _warehouse_general_import obsahuje premennu $warehouse_name (definuje sa v module wp_all_import shopline addon)
 		$args = array(
-	  'numberposts' => -1,
+	  'posts_per_page' => -1,
 	  'nopaging'      => true,
 	  'post_type'   => 'product',
 	  'tax_query'           => array(
@@ -150,7 +234,7 @@ function check_and_change_Single_product_with_customfield($warehouse_name,$impor
 				//echo "Produkt nema ziadneho dodavatela<br>";
 				// kolko ks produktu je skladom
 				$skladom_ks  = get_post_meta( $product_id, '_stock', true );
-				echo $product_id."-skladom ma veci - $skladom_ks<br>";
+				$product_id."-skladom ma veci - $skladom_ks<br>";
 
 
 				if($skladom_ks == 0){
@@ -197,7 +281,7 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 	 */
 	$time_start = microtime(true); 
 	$args = array(
-		'numberposts' => -1,
+		'posts_per_page' => -1,
 		'nopaging'      => true,
 		'post_status'  => 'publish',
 		'post_type'   => 'product_variation',
@@ -222,6 +306,7 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 				$variation_id = get_the_id(); 
 
 				set_variations_how_private($variation_id);
+				//wp_delete_post( $variation_id, true ); 
 
 				// pole vsetkych id produktov ktych varianty boli upravene 
 				$product_parent_ids[] = wp_get_post_parent_id( $variation_id );
@@ -240,34 +325,11 @@ function delete_product_variation_by_customfield($warehouse_name,$import_to_stoc
 		$_unique_product_parent_ids = array_unique($product_parent_ids); // spoji vsetky duplicitne id produktov do jedneho
 
 		// loop ocekuje ktore produkty uz nemaju publish(visible) variant a nastavia mu hodnotu v katalogu hidden
-	$count_hidden_product = 0;	         
-		foreach ($_unique_product_parent_ids as $_unique_product_parent_id) {
-							
-					$product_id = $_unique_product_parent_id;
+         
 
-					$product_variations = new WC_Product_Variable( $product_id );
-
-					// dostupne varianty - pri metode nastavenia statusu variany len update post a nie $variant->save() sa pri pordukte variant stale zobrazuje, ale nema hodnotu  [variation_is_visible]=>1   
-					$product_variations = $product_variations->get_available_variations();
-
-					// vrati 1 ak najde v poli $product_variations aspon jednu value-1 pri key-variation_is_visible
-					$found_key = strlen(array_search(1, array_column($product_variations, 'variation_is_visible')));
-
-					if (empty($found_key) ){
-
-						set_product_hidden($product_id);
-						$count_hidden_product++;
-					}
-		// zobrauje postupne udaje z loopu ak je nieco na zobrazenie		
-/*		flush();
-		ob_flush();*/
-
-
-
-		}
 		echo "Upravenych produktov - ".count($_unique_product_parent_ids);
 		echo "<br>";
-		echo "Vypnutych produktov  - ".$count_hidden_product;
+		//echo "Vypnutych produktov  - ".$count_hidden_product;
 		echo "<br>";
 	$time_end = microtime(true);
 
@@ -306,7 +368,7 @@ function before_xml_import($import_id) {
 			echo "<h2>Funkcia before_xml_import spustena - </h2>";
 			echo "<br>";
 		delete_product_variation_by_customfield($warehouse_name,$import_to_stock);
-		//check_and_change_Single_product_with_customfield($warehouse_name,$import_to_stock);
+		check_and_change_Single_product_with_customfield($warehouse_name,$import_to_stock);
      }
 }
 
@@ -315,3 +377,77 @@ function before_xml_import($import_id) {
  * pred importom 
  */
 add_action('pmxi_before_xml_import', 'before_xml_import', 10, 1);
+
+
+function after_xml_import($import_id) {
+	$args_visible = array(
+
+			//'numberposts' => 100,
+			'posts_per_page' => -1,
+			'nopaging'      => true,
+			'post_status'  => 'publish',
+			//'post_parent'	=> $post_parent,
+			'post_type'   => 'product',
+			'no_found_rows' => true, 
+			'update_post_meta_cache' => false, 
+			'update_post_term_cache' => false, 
+			'return' => 'ids',
+
+			'tax_query' => array(
+				'relation' => 'AND',
+	                      array(
+	                            'taxonomy' => 'product_visibility',
+	                            'field'    => 'name',                            
+	                            'terms'    => 'exclude-from-catalog',
+	                            'operator' => 'NOT IN',
+
+	                      ),
+	                      array(
+	                            'taxonomy' => 'product_type',
+	                            'field'    => 'name',                            
+	                            'terms'    => 'variable',
+	                            'operator' => 'IN',
+
+	                      ),
+	                  ) 
+		);
+
+	$query_visible = get_posts( $args_visible );
+	
+
+		if ( $query_visible ) {
+			echo "Vypnute produkty:<br>";
+			foreach ( $query_visible as $post ){				
+					
+
+					$product_id = $post->ID;
+						$product_variations = new WC_Product_Variable( $product_id );
+
+	// dostupne varianty - pri metode nastavenia statusu variany len update post a nie $variant->save() sa pri pordukte variant stale zobrazuje, ale nema hodnotu  [variation_is_visible]=>1   
+	$product_variations = $product_variations->get_available_variations();
+
+	// vrati 1 ak najde v poli $product_variations aspon jednu value-1 pri key-variation_is_visible
+$found_key = strlen(array_search(1, array_column($product_variations, 'variation_is_visible')));
+
+	if (empty($found_key) ){
+
+		set_product_hidden($product_id);
+		echo "Product Hidden ID--".$product_id;
+		echo "<br>";
+		//$count_hidden_product++;
+	}
+
+
+		//flush();
+		//ob_flush();
+				}
+			wp_reset_postdata();
+			//wp_reset_query();
+		}
+
+		else echo "Nevypnuty ziaden produkt<br>";
+
+}
+
+
+add_action('pmxi_after_xml_import', 'after_xml_import', 10, 1);

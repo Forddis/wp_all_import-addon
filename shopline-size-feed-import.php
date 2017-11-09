@@ -59,11 +59,9 @@ function addon_fields_function_run_init() {
 
 
 function addon_import_function($post_id, $data, $import_options){
-	/*update_post_meta( $post_id, "My Field", $data['my_text_field']);
-	var_dump($post_id);
-	var_dump($data);
-	var_dump($import_options);*/
+
 	if (!empty($data['_sku_import'])){
+
 		$data['_size_import'];
 		echo "<pre>";
 		print_r($post_id);
@@ -73,24 +71,16 @@ function addon_import_function($post_id, $data, $import_options){
 		print_r($data);
 		echo "</pre>";
 
-		$product_id = $post_id;
-		$_product = wc_get_product($product_id); //vypise informacie o produkte
+/*		echo "<pre>";
+		print_r($import_options);
+		echo "</pre>";*/
 
-		/**
-		 * set product (parent)
-		 * catalog_visibilit 	: visible
-		 * stock_status 		: instock
-		 * set_backorders		: notify
-		 */
-		
-		$visibility 	= wc_clean( 'visible' );// Options: 'hidden', 'visible', 'search' and 'catalog'.
-	 	$stock_status 	= wc_clean( 'instock' );// 'outofstock', 'instock'
-	 	
-	 	$_product->set_catalog_visibility($visibility );	 			
-		$_product->set_backorders( 'notify' );
-		$_product->set_stock_status($stock_status);
-
-		$_product->save();
+	$product_id = $post_id;
+	$_product = wc_get_product($product_id); //vypise informacie o produkte
+	$warehouse_slug = $data['_warehouse_import'];
+	echo "<br>Sulg - velkoskladu - ".$warehouse_slug."<br>";
+	// nastavi produkt (parent) na visible
+	set_product_visible($product_id);
 
 
 		/**
@@ -104,11 +94,11 @@ function addon_import_function($post_id, $data, $import_options){
 					$variations = $_product->get_available_variations();
 					$previously_attributes = wc_get_product_terms($product_id,'pa_velkost',array( 'fields' => 'names'));//atributy ktore produkt ma pred importom
 
-				/*	echo "<pre>";
-					print_r($_product);
-					echo "</pre>";*/
+					echo "<pre>";
+					print_r($previously_attributes);
+					echo "</pre>";
 
-
+				
 
 				echo "regular_price-".$_product->get_regular_price()."<br>";
 				echo "sale_price-".$_product->get_sale_price()."<br>";
@@ -123,96 +113,181 @@ function addon_import_function($post_id, $data, $import_options){
 
 
 
+				// Najdi Variantu produktu podla jeho ID ako ktora ma oznacenie podla velkoskladu a hodnoty z taxonomie pa_velkost ktora je brana podla mena z velkosti z xml
 
+$size_name[] = str_replace(',', '.', wc_clean($data['_size_import']));// zmeni ciarku na bodku
+echo "size_name[0] - ".$size_name[0]."<br>";
+$taxonomy = 'pa_velkost';
+echo "taxonomy - ".$taxonomy."<br>";
+//$meta = get_post_meta($variation_id, 'attribute_'.$taxonomy, true);
+$term = get_term_by('name', $size_name[0], $taxonomy);
+echo "<pre>";
+echo "term - ";
+print_r($term);
+echo "<pre>";
 
-					/*********************************************************************************
-					 *   Create atribute
-					 */
+				$args_prod_var = array(
+						'posts_per_page' => 1,
+						//'nopaging'      => true,
+						'post_status'  => array('publish','private'),
+						'post_parent'	=> $product_id,
+						'post_type'   => 'product_variation',
+						'return' => 'ids',
+
+						'meta_query' => array(
+								'relation' => 'AND',
+								array(
+									'key'		=> '_warehouse_variation_import',
+									'value'		=> $warehouse_slug
+								
+								),
+								array(
+									'key'		=> 'attribute_pa_velkost',
+									'value'		=> $term->slug
+
+								)
+							)
+					);
+				//$used_variation_query = new WP_Query( $args_prod_var );
+				$used_variation_query = get_posts( $args_prod_var );
 					
-					
-					echo $size_name[] = str_replace(',', '.', wc_clean($data['_size_import']));// zmeni ciarku na bodku
-				   // In a class constructor
-				     $attribute = new stdClass();
-				      if (taxonomy_exists(wc_attribute_taxonomy_name('velkost'))) :
-				        echo wc_attribute_taxonomy_name('velkost')."<br>";
-				        $attribute->size_tax = wc_attribute_taxonomy_name('velkost');
-				      endif; 
+
+echo "<pre>";
+echo "query - ";
+//print_r($used_variation_query);
+echo "<pre>";
 
 
-				            // Insert the attributes (I will be using size and color for variations)
-				      $attributes = array(
-				          $attribute->size_tax => array(
-				              'name' => $attribute->size_tax,
-				              'value' =>'',
-				              'is_visible' => '0',
-				              'is_variation' => '1',
-				              'is_taxonomy' => '1'
-				              //'position' => 1000
-				          )
+				?>
+				<ol>
+				<?php 
 
-				      );
-
-					update_post_meta( $product_id, '_product_attributes', $attributes ); //updatne atributy produktu 
-					wp_set_object_terms( $product_id,  ( ! empty($previously_attributes)) ? array_merge($previously_attributes, $size_name) : $size_name , $attribute->size_tax );
-					/**************************************************************************************
-					 *  Create variation
-					 */
-
-					$parent_id = $product_id;
-
-					  $variation = array(
-					      'post_title'   => 'Product #' . $parent_id . ' Variation-'.$size,
-					      'post_content' => '',
-					      'post_status'  => 'publish',
-					      'post_parent'  => $parent_id,
-					      'post_type'    => 'product_variation'
-					  );
-
-					  $variation_id = wp_insert_post( $variation );//vytvoy post(variant) so zadefinovanymi atributmi
-					  echo  $variation_id."<br>";
-					/************** get atribute slug by name ***************/					 
-					  $taxonomy = $attribute->size_tax;
-						$meta = get_post_meta($variation_id, 'attribute_'.$taxonomy, true);
-						$term = get_term_by('name', $size_name[0], $taxonomy);
+			// AK je varianta uz vytvorena tak jue treba nastavit staus na publish
+				if ( $used_variation_query ) {
 						
-						echo "term -slug ".$term->slug;
-						echo "<hr>";
-					/**************************************/
+						foreach ( $used_variation_query as $post ) {				
+								
+							$variant_sku = get_post_meta( $post->ID, '_sku', true );
+							$variation_id = $post->ID;
+						echo "<li>";
+						echo $variant_sku."-----ID--".$post->ID;
+						echo "</li>"; 
 
-					 $size_name= $term->name;
-					 $size_slug= $term->slug;//pre vytvorenie atributu do variant je nutne pouzit slug atributu       
-					  update_post_meta( $variation_id, 'attribute_' . $taxonomy, $size_slug );
+							
 
-					  // sku pre variant zlozene z vyrobne cislo --velkost-dodavatel
-					  $parent_sku = get_post_meta( $parent_id, '_sku', true );
-					  $variant_sku = $parent_sku."--".$size_name."--".$data[_warehouse_import];
-					  update_post_meta( $variation_id, '_sku', $variant_sku);
+			//Ak je import do skladu 				
+							if ($data['_if_stock_import']=='stock') {
 
-					// správa skladu yes/no
-					update_post_meta( $variation_id, '_manage_stock', 'yes' );
+								echo "<br>Na sklad<br>";
+								$stock_qty = $data['_stock_qty_import'];
+								set_stock_variations_how_publish($variation_id,$stock_qty);
+							}
+			//Ked nie je do skladu - ext. dodavatel
+							else{
+								
+								echo "Nie na sklad<br>";
+								set_variations_how_publish($variation_id);
+							}
 
-					// If import item update to stock
-					if ($data['_if_stock_import']=='stock') {
-
-						//pocet kusov na sklade
-				     	update_post_meta( $variation_id, '_stock', $data['_stock_qty_import'] );
-
-						// Povoliť nákup aj keď tovar nie je na sklade?
-						update_post_meta( $variation_id, '_backorders', 'no' );
-					}
-					else{
-						// Povoliť nákup aj keď tovar nie je na sklade?
-						update_post_meta( $variation_id, '_backorders', 'notify' );
-					}
-
-				     
+						}
+			wp_reset_postdata();
+			//wp_reset_query();  // Restore global post data stomped by the_post(). 
+				}
+			// AK varianta este nie je vytvorena 
+				else{
 
 
-				    update_post_meta( $variation_id, '_warehouse_variation_import', $data[_warehouse_import]);
 
-				    update_post_meta( $variation_id, '_regular_price', $regular_price);
-				    update_post_meta( $variation_id, '_sale_price', $sale_price);
 
+
+								/*********************************************************************************
+								 *   Create atribute
+								 */
+								
+								
+						//echo $size_name[] = str_replace(',', '.', wc_clean($data['_size_import']));// zmeni ciarku na bodku
+							   // In a class constructor
+							     $attribute = new stdClass();
+							      if (taxonomy_exists(wc_attribute_taxonomy_name('velkost'))) :
+							        echo wc_attribute_taxonomy_name('velkost')."<br>";
+							        $attribute->size_tax = wc_attribute_taxonomy_name('velkost');
+							      endif; 
+
+
+							            // Insert the attributes (I will be using size and color for variations)
+							      $attributes = array(
+							          $attribute->size_tax => array(
+							              'name' => $attribute->size_tax,
+							              'value' =>'',
+							              'is_visible' => '0',
+							              'is_variation' => '1',
+							              'is_taxonomy' => '1'
+							              //'position' => 1000
+							          )
+
+							      );
+
+								update_post_meta( $product_id, '_product_attributes', $attributes ); //updatne atributy produktu 
+								wp_set_object_terms( $product_id,  ( ! empty($previously_attributes)) ? array_merge($previously_attributes, $size_name) : $size_name , $attribute->size_tax );
+								/**************************************************************************************
+								 *  Create variation
+								 */
+
+								$parent_id = $product_id;
+
+								  $variation = array(
+								      'post_title'   => 'Product #' . $parent_id . ' Variation-'.$size,
+								      'post_content' => '',
+								      'post_status'  => 'publish',
+								      'post_parent'  => $parent_id,
+								      'post_type'    => 'product_variation'
+								  );
+
+								  $variation_id = wp_insert_post( $variation );//vytvoy post(variant) so zadefinovanymi atributmi
+								  echo  $variation_id."<br>";
+								/************** get atribute slug by name ***************/					 
+								  $taxonomy = $attribute->size_tax;
+									$meta = get_post_meta($variation_id, 'attribute_'.$taxonomy, true);
+									$term = get_term_by('name', $size_name[0], $taxonomy);
+									
+									echo "term -slug ".$term->slug;
+									echo "<hr>";
+								/**************************************/
+
+								 $size_name= $term->name;
+								 $size_slug= $term->slug;//pre vytvorenie atributu do variant je nutne pouzit slug atributu       
+								  update_post_meta( $variation_id, 'attribute_' . $taxonomy, $size_slug );
+
+								  // sku pre variant zlozene z vyrobne cislo --velkost-dodavatel
+								  $parent_sku = get_post_meta( $parent_id, '_sku', true );
+								  $variant_sku = $parent_sku."--".$size_name."--".$data[_warehouse_import];
+								  update_post_meta( $variation_id, '_sku', $variant_sku);
+
+								// správa skladu yes/no
+								update_post_meta( $variation_id, '_manage_stock', 'yes' );
+
+								// If import item update to stock
+								if ($data['_if_stock_import']=='stock') {
+
+									//pocet kusov na sklade
+							     	update_post_meta( $variation_id, '_stock', $data['_stock_qty_import'] );
+
+									// Povoliť nákup aj keď tovar nie je na sklade?
+									update_post_meta( $variation_id, '_backorders', 'no' );
+								}
+								else{
+									// Povoliť nákup aj keď tovar nie je na sklade?
+									update_post_meta( $variation_id, '_backorders', 'notify' );
+								}
+
+							     
+
+
+							    update_post_meta( $variation_id, '_warehouse_variation_import', $data[_warehouse_import]);
+
+							    update_post_meta( $variation_id, '_regular_price', $regular_price);
+							    update_post_meta( $variation_id, '_sale_price', $sale_price);
+				}
 		} 
 		else {
 			/******************************** Product Single********************************************/
