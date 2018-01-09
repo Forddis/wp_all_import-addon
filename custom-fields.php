@@ -59,7 +59,7 @@ print_r($warehouse_import);
 function woo_add_custom_general_fields_save( $post_id ){
 	
 	// multiselect
-	$redeem_in_stores = (array) $_POST['_warehouse_general_import'];
+	@$redeem_in_stores = (array) $_POST['_warehouse_general_import'];
 	update_post_meta( $post_id, '_warehouse_general_import', $redeem_in_stores );
 	
 }
@@ -109,4 +109,76 @@ function save_variation_settings_fields( $post_id ) {
 		update_post_meta( $post_id, '_warehouse_variation_import', esc_attr( $text_field ) );
 	}
 
+}
+
+
+
+ /***********************************Cutom filed temp regular price and sale price ************************************************/
+/*
+* https://www.cloudways.com/blog/add-custom-product-fields-woocommerce/
+*/
+
+// Display Fields
+add_action( 'woocommerce_product_options_general_product_data', 'shopline_add_product_custom_general_fields' );
+
+// Save Fields
+add_action( 'woocommerce_process_product_meta', 'shopline_save_product_custom_general_fields' );
+
+/**
+ * Create new fields for variations
+ *
+*/
+function shopline_add_product_custom_general_fields(){
+	global $woocommerce, $post;
+	
+ 	//Custom Product Number Field
+    woocommerce_wp_text_input(
+        array(
+            'id' => '_regular_price_temp_filed',
+            'placeholder' => '',
+            'label' => __('Normálna cena (€) (čítaj info)', 'woocommerce'),
+            'desc_tip' => true,
+            'description' => __('Z tejto ceny sa generuje cena pre varianty, pri importe velkostí','woocommerce'),
+            'type' => 'number',
+            'custom_attributes' => array(
+                'step' => 'any',
+                'min' => '0'
+            )
+        )
+    );
+
+    //Custom Product Number Field
+    woocommerce_wp_text_input(
+        array(
+            'id' => '_sale_price_temp_filed',
+            'placeholder' => '',
+            'label' => __('Cena po zlave (€) (čítaj info)', 'woocommerce'),
+            'desc_tip' => true,
+            'description' => __('Z tejto ceny sa generuje cena pre varianty, pri importe velkostí', 'woocommerce'),
+            'type' => 'number',
+            'custom_attributes' => array(
+                'step' => 'any',
+                'min' => '0'
+            )
+        )
+    );
+}
+
+/**
+ * Save new fields for variations
+ *
+*/
+function shopline_save_product_custom_general_fields($post_id ){
+
+	// Number Field
+	$_regular_price_temp_filed = $_POST['_regular_price_temp_filed'];
+	if( ! empty( $_regular_price_temp_filed ) ) {
+		update_post_meta( $post_id, '_regular_price_temp_filed', esc_attr( $_regular_price_temp_filed ) );
+	}
+
+	// Number Field
+	$_sale_price_temp_filed = $_POST['_sale_price_temp_filed'];
+	if( ! empty( $_sale_price_temp_filed ) ) {
+		update_post_meta( $post_id, '_sale_price_temp_filed', esc_attr( $_sale_price_temp_filed ) );
+	}
 }
