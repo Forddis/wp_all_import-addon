@@ -99,17 +99,28 @@ function addon_import_function($post_id, $data, $import_options){
 					echo "</pre>";
 
 				
-
+				echo "<hr>";
 				echo "regular_price-".$_product->get_regular_price()."<br>";
 				echo "sale_price-".$_product->get_sale_price()."<br>";
 				echo "price-".$_product->get_price()."<br>";
+				echo "<br>";
 				echo "_sale_price_tmp-".get_post_meta( $post_id, '_sale_price_tmp', true )."<br>";
 				echo "_regular_price_tmp-".get_post_meta( $post_id, '_regular_price_tmp', true )."<br>";
 				echo "_price_tmp-".get_post_meta( $post_id, '_price_tmp', true )."<br>";
+				echo "<br>";
+				echo "_regular_price_temp_filed-".get_post_meta( $post_id, '_regular_price_temp_filed', true )."<br>";
+				echo "_sale_price_temp_filed-".get_post_meta( $post_id, '_sale_price_temp_filed', true )."<br>";
+				
 
-				$regular_price 	= $_product->get_regular_price();
-				$sale_price 	= $_product->get_sale_price();
-				$price 			= $_product->get_price();
+				echo "<hr>";
+
+				//$regular_price 	= $_product->get_regular_price();
+				//$sale_price 	= $_product->get_sale_price();
+				//$price 			= $_product->get_price();
+				
+				// ceny z custom fieldov
+				$regular_price 	= get_post_meta( $post_id, '_regular_price_temp_filed', true );
+				$sale_price 	= get_post_meta( $post_id, '_sale_price_temp_filed', true );
 
 
 
